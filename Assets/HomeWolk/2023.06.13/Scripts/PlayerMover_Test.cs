@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,6 +9,8 @@ public class PlayerMover_Test : MonoBehaviour
 	[SerializeField] float walkSpeed;
 	[SerializeField] float runSpeed;
 	[SerializeField] float jumpSpeed;
+	[SerializeField] float walkStepRange;   // 걷는 발소리 범위
+	[SerializeField] float runStepRange;    // 뛰는 발소리 범위
 
 	Animator anim;
 	CharacterController controller;
@@ -15,6 +18,7 @@ public class PlayerMover_Test : MonoBehaviour
 	float ySpeed;
 	float curSpeed;
 	bool walk;
+	float lastStepTime = 0.5f;      // 마지막으로 발소리를 낸 시간이 0.5초
 
 	private void Awake()
 	{
@@ -64,6 +68,14 @@ public class PlayerMover_Test : MonoBehaviour
 		// 캐릭터 무브
 		// z, x입력값으로 움직여주기
 		controller.Move((forwardVec * moveDir.z + rightVec * moveDir.x) * curSpeed * Time.deltaTime);
+
+
+		lastStepTime -= Time.deltaTime;
+		if (lastStepTime < 0)    	// 0.5초만큼 다 흘렀다면!
+		{
+			lastStepTime = 0.5f;	// 다시 0.5초로 지정
+			GenerateFootStepSound();
+		}
 	}
 
 	void OnMove(InputValue value)
@@ -96,5 +108,23 @@ public class PlayerMover_Test : MonoBehaviour
 	{
 		walk = value.isPressed;
 		// isPressed : Pass Through에서 눌렀을 땐 true, 뗐을 땐 false
+	}
+
+	void GenerateFootStepSound()	// 발소리
+	{
+		Collider[] colliders = Physics.OverlapSphere(transform.position, walk ? walkStepRange : runStepRange);
+		// walk면 walkStepRange만큼, run이면 runStepRange만큼! (삼항연산자)
+		foreach (Collider collider in colliders)
+		{
+			IListenable_Test listenable = collider.GetComponent<IListenable_Test>();
+			listenable?.Listen(transform);		// 그 대상이 IListenable이 있는 대상인지 확인
+		}
+	}
+
+	private void OnDrawGizmosSelected()
+	{
+		Gizmos.color = Color.cyan;
+		Gizmos.DrawWireSphere(transform.position, walkStepRange);
+		Gizmos.DrawWireSphere(transform.position, runStepRange);
 	}
 }
